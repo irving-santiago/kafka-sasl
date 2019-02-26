@@ -7,17 +7,20 @@ set -o nounset \
 
 pass=confluent
 
+rm -f kafkacat-ca1-signed.pem
+
 # Generate CA key
 openssl req -new -x509 -keyout __snakeoil-ca-1.key -out __snakeoil-ca-1.crt -days 365 -subj '/CN=ca1.test.confluent.io/OU=TEST/O=CONFLUENT/L=PaloAlto/S=Ca/C=US' -passin pass:$pass -passout pass:$pass
 
 # Kafkacat
 openssl genrsa -des3 -passout "pass:$pass" -out __kafkacat.client.key 1024
 openssl req -passin "pass:$pass" -passout "pass:$pass" -key __kafkacat.client.key -new -out __kafkacat.client.req -subj '/CN=ca1.test.confluent.io/OU=TEST/O=CONFLUENT/L=PaloAlto/S=Ca/C=US'
-openssl x509 -req -CA __snakeoil-ca-1.crt -CAkey __snakeoil-ca-1.key -in __kafkacat.client.req -out __kafkacat-ca1-signed.pem -days 9999 -CAcreateserial -passin "pass:$pass"
+openssl x509 -req -CA __snakeoil-ca-1.crt -CAkey __snakeoil-ca-1.key -in __kafkacat.client.req -out kafkacat-ca1-signed.pem -days 9999 -CAcreateserial -passin "pass:$pass"
 
 for i in kafka client
 do
 	echo $i
+	rm -rf ./$i
 	mkdir ./$i
 	# Create keystores
 	keytool -genkey -noprompt \
