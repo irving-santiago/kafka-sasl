@@ -7,6 +7,7 @@ set -o nounset \
 
 pass=confluent
 
+cd secrets
 rm -f kafkacat-ca1-signed.pem
 
 # Generate CA key
