@@ -13,3 +13,8 @@ for topic in "$@"
 do
   create_topic_with_retry $topic
 done
+
+cub zk-ready zookeeper:22181 120
+kafka-configs --zookeeper zookeeper:22181 --alter --add-config "SCRAM-SHA-256=[iterations=4096,password=password]" --entity-type users --entity-name metricsreporter
+kafka-configs --zookeeper zookeeper:22181 --alter --add-config "SCRAM-SHA-256=[iterations=4096,password=!@#^()%n&0*ABCDabcd123]" --entity-type users --entity-name kafkaclient
+kafka-configs --zookeeper zookeeper:22181 --alter --add-config "SCRAM-SHA-256=[iterations=4096,password=password]" --entity-type users --entity-name kafkabroker

@@ -1,23 +1,6 @@
 version: '3.5'
 
 services:
-  zookeeper-add-kafka-users:
-    image: confluentinc/cp-kafka:5.1.0
-    container_name: "zookeeper-add-kafka-users"
-    depends_on:
-      - zookeeper
-    command: "bash -c 'echo Waiting for Zookeeper to be ready... && \
-                          cub zk-ready zookeeper:22181 120 && \
-                          kafka-configs --zookeeper zookeeper:22181 --alter --add-config 'SCRAM-SHA-256=[iterations=4096,password=password]' --entity-type users --entity-name metricsreporter && \
-                          kafka-configs --zookeeper zookeeper:22181 --alter --add-config 'SCRAM-SHA-256=[iterations=4096,password=password]' --entity-type users --entity-name kafkaclient && \
-                          kafka-configs --zookeeper zookeeper:22181 --alter --add-config 'SCRAM-SHA-256=[iterations=4096,password=password]' --entity-type users --entity-name kafkabroker '"
-    environment:
-      KAFKA_BROKER_ID: ignored
-      KAFKA_ZOOKEEPER_CONNECT: ignored
-      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/zookeeper_client_jaas.conf
-    volumes:
-      - ./secrets/conf/zookeeper_client_jaas.conf:/etc/kafka/secrets/zookeeper_client_jaas.conf
-
   zookeeper:
     image: confluentinc/cp-zookeeper:5.1.0
     hostname: zookeeper
@@ -107,14 +90,13 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:22181"
       SCHEMA_REGISTRY_HOST_NAME: "schema-registry"
       SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
-      #SCHEMA_REGISTRY_DEBUG: "true"
       SCHEMA_REGISTRY_KAFKASTORE_SSL_ENABLED_PROTOCOLS: "TLSv1.2,TLSv1.1,TLSv1"
       SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: "/etc/secrets/truststore.jks"
       SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: "confluent"
       SCHEMA_REGISTRY_KAFKASTORE_SSL_PROTOCOL: "TLS"
       SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: "SCRAM-SHA-256"
       SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: "SASL_SSL"
-      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafkaclient" password="password";
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafkaclient" password="!@#^()%n&0*ABCDabcd123";
       SCHEMA_REGISTRY_KAFKASTORE_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
       SCHEMA_REGISTRY_KAFKASTORE_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
     volumes:
@@ -128,10 +110,11 @@ services:
     command: [ "test-topic" ]
     environment:
         KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/conf/zookeeper_client_jaas.conf"
+        KAFKA_BROKER_ID: ignored
+        KAFKA_ZOOKEEPER_CONNECT: ignored
     volumes:
       - ./secrets/conf:/etc/conf/
     depends_on:
       - kafka
       - schema-registry
-      - zookeeper-add-kafka-users
 
