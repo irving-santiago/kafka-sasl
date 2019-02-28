@@ -40,7 +40,7 @@ services:
       KAFKA_SUPER_USERS: User:kafkabroker
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_OPTS: -Dzookeeper.sasl.clientconfig=Client
-        -Djava.security.auth.login.config=/etc/kafka/conf/kafka_server_jaas.conf
+        -Djava.security.auth.login.config=/etc/kafka/conf/kafka_jaas.conf
     volumes:
       - ./secrets/kafka:/etc/kafka/secrets
       - ./secrets/conf:/etc/kafka/conf
