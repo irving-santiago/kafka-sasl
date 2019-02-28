@@ -1,53 +1,48 @@
 #!/bin/bash
 
-set -o nounset \
-    -o errexit \
-    -o verbose \
-    -o xtrace
-
-pass=confluent
-
+set +x
 cd secrets
-rm -f snakeoil-ca-1.crt
 
+pass=devpassword
+dname="/CN=ca1.test.io/OU=Dev/O=TEST/L=Tokyo/S=Tokyo/C=JP"
+dname_tail="OU=Dev, O=TEST, L=Tokyo, S=Tokyo, C=JP"
+crt=cert.crt
+crtkey="temp.$crt.key"
+
+rm -f cert*
 # Generate CA key
-openssl req -new -x509 -keyout __snakeoil-ca-1.key -out snakeoil-ca-1.crt -days 365 -subj '/CN=ca1.test.confluent.io/OU=TEST/O=CONFLUENT/L=PaloAlto/S=Ca/C=US' -passin pass:$pass -passout pass:$pass
+openssl req -new -x509 -keyout $crtkey -out $crt -days 9999 -subj $dname -passin pass:$pass -passout pass:$pass
 
 # Kafkacat
-openssl genrsa -des3 -passout "pass:$pass" -out __kafkacat.client.key 1024
-openssl req -passin "pass:$pass" -passout "pass:$pass" -key __kafkacat.client.key -new -out __kafkacat.client.req -subj '/CN=ca1.test.confluent.io/OU=TEST/O=CONFLUENT/L=PaloAlto/S=Ca/C=US'
-openssl x509 -req -CA snakeoil-ca-1.crt -CAkey __snakeoil-ca-1.key -in __kafkacat.client.req -out __kafkacat-ca1-signed.pem -days 9999 -CAcreateserial -passin "pass:$pass"
+openssl genrsa -des3 -passout "pass:$pass" -out temp.clientkey 1024
+openssl req -passin "pass:$pass" -passout "pass:$pass" -key temp.clientkey -new -out temp.clientreq -subj $dname
+openssl x509 -req -CA $crt -CAkey $crtkey -in temp.clientreq -out temp.client.pem -days 9999 -CAcreateserial -passin "pass:$pass"
 
 for i in kafka client
 do
-	echo $i
 	rm -rf ./$i
 	mkdir ./$i
 	# Create keystores
 	keytool -genkey -noprompt \
 				 -alias $i \
-				 -dname "CN=$i, OU=Dev, O=CONFLUENT, L=PaloAlto, S=Ca, C=US" \
+				 -dname "CN=$i, $dname_tail" \
 				 -keystore ./$i/keystore.jks \
 				 -keyalg RSA \
 				 -storepass $pass \
 				 -keypass $pass
 
+  csr="temp.$i.csr"
+  signedcrt="temp.$i.crt"
 	# Create CSR, sign the key and import back into keystore
-	keytool -keystore ./$i/keystore.jks -alias $i -certreq -file __$i.csr -storepass $pass -keypass $pass -noprompt
+	keytool -keystore ./$i/keystore.jks -alias $i -certreq -file $csr -storepass $pass -keypass $pass -noprompt
+  openssl x509 -req -CA $crt -CAkey $crtkey -in $csr -out $signedcrt -days 9999 -CAcreateserial -passin pass:$pass
+	keytool -keystore ./$i/keystore.jks -alias CARoot -import -file $crt -storepass $pass -keypass $pass -noprompt
+  keytool -keystore ./$i/keystore.jks -alias $i -import -file $signedcrt  -storepass $pass -keypass $pass -noprompt
 
-  openssl x509 -req -CA snakeoil-ca-1.crt -CAkey __snakeoil-ca-1.key -in __$i.csr -out __$i-ca1-signed.crt -days 9999 -CAcreateserial -passin pass:$pass
+	# Create truststore and import the CA crt.
+	keytool -keystore ./$i/truststore.jks -alias CARoot -import -file $crt -storepass $pass -keypass $pass -noprompt
 
-	keytool -keystore ./$i/keystore.jks -alias CARoot -import -file snakeoil-ca-1.crt -storepass $pass -keypass $pass -noprompt
-
-  keytool -keystore ./$i/keystore.jks -alias $i -import -file __$i-ca1-signed.crt -storepass $pass -keypass $pass -noprompt
-
-	# Create truststore and import the CA cert.
-	keytool -keystore ./$i/truststore.jks -alias CARoot -import -file snakeoil-ca-1.crt -storepass $pass -keypass $pass -noprompt
-
-  echo "$pass" > ./$i/sslkey_creds
-  echo "$pass" > ./$i/keystore_creds
-  echo "$pass" > ./$i/truststore_creds
-
+  echo "$pass" > ./$i/creds
 done
 
-rm -rf __*
+rm -rf temp*
