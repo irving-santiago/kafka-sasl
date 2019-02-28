@@ -25,6 +25,6 @@ java/.settings/
 ### SSL files ##
 *.crt
 *.jks
-*_creds
+*creds
 *.key
 *.pem
