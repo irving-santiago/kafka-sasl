@@ -13,7 +13,6 @@ Example sals-ssl kafka cluster with a schema-registry node
    ```
 3. If the cluster doesn't start correctly you may want to do:
    ```
-   sbt service/run
    docker-compose up -d --build --force-recreate
    ```
 
