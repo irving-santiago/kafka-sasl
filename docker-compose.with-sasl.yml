@@ -1,0 +1,58 @@
+version: '3.5'
+
+services:
+  zookeeper:
+    environment:
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/zookeeper_jaas.conf
+        -Dzookeeper.authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+        -Dzookeeper.authProvider.2=org.apache.zookeeper.server.auth.DigestAuthenticationProvider
+        -DjaasLoginRenew=3600000
+        -DrequireClientAuthScheme=sasl
+    volumes:
+      - ./secrets/conf/zookeeper_jaas.conf:/etc/kafka/secrets/zookeeper_jaas.conf
+
+  kafka:
+    environment:
+      KAFKA_LISTENERS: SASL_SSL://kafka:9092,EXTERNAL://kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: SASL_SSL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SASL_SSL:SASL_SSL,EXTERNAL:SASL_SSL
+      KAFKA_INTER_BROKER_LISTENER_NAME: SASL_SSL
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_SSL_CLIENT_AUTH: requested
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds
+      KAFKA_SSL_KEYSTORE_FILENAME: keystore.jks
+      KAFKA_SSL_KEY_CREDENTIALS: creds
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS_LOCATION: /etc/kafka/conf/creds
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      KAFKA_SSL_TRUSTSTORE_FILENAME: truststore.jks
+      KAFKA_SUPER_USERS: User:kafkabroker
+      KAFKA_OPTS: -Dzookeeper.sasl.clientconfig=Client
+        -Djava.security.auth.login.config=/etc/kafka/conf/kafka_jaas.conf
+    volumes:
+      - ./secrets/kafka:/etc/kafka/secrets
+      - ./secrets/conf:/etc/kafka/conf
+
+  schema-registry:
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: SASL_SSL://kafka:9092
+      SCHEMA_REGISTRY_KAFKASTORE_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="kafkaclient" password="!@#^()%n&0*ABCDabcd123";
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: SCRAM-SHA-256
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_SSL
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.1,TLSv1
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_PROTOCOL: TLS
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/secrets/truststore.jks
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: devpassword
+    volumes:
+      - ./secrets/client:/etc/secrets
+
+  kafka-initializer:
+    environment:
+        KAFKA_OPTS: -Djava.security.auth.login.config=/etc/conf/zookeeper_jaas.conf
+        KAFKA_USE_SASL_SSL: "true"
+    volumes:
+      - ./secrets/conf:/etc/conf/
+
