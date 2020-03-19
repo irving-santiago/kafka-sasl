@@ -1,6 +1,20 @@
 version: '3.5'
 
 services:
+  cassandra:
+    image: cassandra:3.11.3
+    container_name: cassandra
+    volumes:
+      - ./secrets/cassandra:/opt/cassandra/conf/certs
+      - ./cassandra/cassandra.yml:/etc/cassandra/cassandra.yaml
+      #- ./secrets/conf/zookeeper_jaas.conf:/etc/kafka/secrets/zookeeper_jaas.conf
+      #- ./data/cassandra:/var/lib/cassandra
+    environment:
+      KAFKA_LISTENERS: SASL_SSL://kafka:9092,EXTERNAL://kafka:9093
+    ports:
+      - 9042:9042
+      - 9160:9160
+
   zookeeper:
     environment:
       KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/zookeeper_jaas.conf

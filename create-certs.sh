@@ -19,7 +19,7 @@ openssl genrsa -des3 -passout "pass:$pass" -out temp.clientkey 1024
 openssl req -passin "pass:$pass" -passout "pass:$pass" -key temp.clientkey -new -out temp.clientreq -subj $dname
 openssl x509 -req -CA $crt -CAkey $crtkey -in temp.clientreq -out temp.client.pem -days 9999 -CAcreateserial -passin "pass:$pass"
 
-for i in kafka client
+for i in cassandra kafka client
 do
 	rm -rf ./$i
 	mkdir ./$i
@@ -43,7 +43,7 @@ do
 	# Create truststore and import the CA crt.
 	keytool -keystore ./$i/truststore.jks -alias CARoot -import -file $crt -storepass $pass -keypass $pass -noprompt
 
-  if [ "$i" = "kafka" ]; then
+  if [ "$i" = "kafka" ] || [ "$i" = "cassandra" ]; then
 	  keytool -genkey -noprompt \
 	  			 -alias localhost \
 	  			 -dname "CN=localhost, $dname_tail" \
